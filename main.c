@@ -1,4 +1,4 @@
-/***
+/*
 * Sensor e controle de vazao de água. 
 * Codigo para medir o vazao (em L/min) e o volume atraves do numero de pulsos
 * dados pelo sensor. Um rele é mantido acionado enquanto o volume estiver abaixo
@@ -15,7 +15,7 @@
 * Pedro Vanzan 11805015
 * Rafael Ferro 11800393
 * 
-***/
+*/
 //==============================================================================================
 #include <Wire.h> // Biblioteca utilizada para fazer a comunicação com o I2C
 #include <LiquidCrystal_I2C.h> // Biblioteca utilizada para fazer a comunicação com o display 20x4
@@ -32,6 +32,7 @@ const float volume_sem_limite = true;
 const float tarifa = 4000;
 const float volume_limite = 1.5;
 const float vazao_limite = 50;
+
 //==============================================================================================
 //definicao do pino do sensor e de interrupcao
 const int INTERRUPCAO_SENSOR = 0; //interrupt = 0 equivale ao pino digital 2
@@ -59,6 +60,7 @@ char botao;
 //definicao da variavel de intervalo de tempo
 unsigned long tempo_antes = 0;
 unsigned long tempo_botao = 0;
+
 //==============================================================================================
 void setup(){
 
@@ -98,9 +100,17 @@ void loop() {
     //conversao do valor de pulsos para L/min
     vazao = ((1000.0 / (millis() - tempo_antes)) * contador) / fator_calibracao;
 
+    //calculo do volume em L passado pelo sensor
+    volume = vazao / 60;
+
+    //armazenamento do volume
+    volume_total += volume;
+
+    //calculo de custo
+    custo = volume_total * tarifa / 1000;
 
     if (mode == 0){
-      lcd.setCursor(0,0); // Coloca o cursor do display na coluna 1 e linha 1
+      lcd.setCursor(0, 0); // Coloca o cursor do display na coluna 1 e linha 1
       lcd.print("Vazao:");
       lcd.print(vazao);
       lcd.print("L/min ");
@@ -110,7 +120,7 @@ void loop() {
       lcd.print("L/min    ");
     }
     else if(mode == 1){
-      lcd.setCursor(0,0); // Coloca o cursor do display na coluna 1 e linha 1
+      lcd.setCursor(0, 0); // Coloca o cursor do display na coluna 1 e linha 1
       lcd.print("Volume:");
       lcd.print(volume_total);
       lcd.print("L     ");
@@ -120,33 +130,14 @@ void loop() {
       lcd.print("L       ");
     }
     else{
-      lcd.setCursor(0,0); // Coloca o cursor do display na coluna 1 e linha 1
+      lcd.setCursor(0, 0); // Coloca o cursor do display na coluna 1 e linha 1
       lcd.print("Custo: R$ ");
       lcd.print(custo);
       lcd.setCursor(0, 1);
       lcd.print("Tf:R$");
       lcd.print(tarifa);
       lcd.print("/m3");
-      }
-    //exibicao do valor de vazao
-    Serial.print("Mode");
-    Serial.print(mode);
-    Serial.println();
-
-    //calculo do volume em L passado pelo sensor
-    volume = vazao / 60;
-
-    //armazenamento do volume
-    volume_total += volume;
-
-    //calculo de custo
-    custo = volume_total * tarifa/1000;
-
-    //exibicao do valor de volume
-    Serial.print("Volume: ");
-    Serial.print(volume_total);
-    Serial.println(" L");
-    Serial.println();
+    }
 
     //logica para o acionamento do rele
     if(vazao > vazao_limite){
@@ -160,25 +151,37 @@ void loop() {
       digitalWrite(PINO_RELE, HIGH);
       delay(300);
     }
-   
+
     //reinicializacao do contador de pulsos
     contador = 0;
-    
+
     //atualizacao da variavel tempo_antes
     tempo_antes = millis();
 
     //contagem de pulsos do sensor
     attachInterrupt(INTERRUPCAO_SENSOR, contador_pulso, FALLING);
-    
+
+    //Testes no IDLE 
+
+    //exibicao do valor de vazao
+    Serial.print("Mode");
+    Serial.print(mode);
+    Serial.println();
+
+    //exibicao do valor de volume
+    Serial.print("Volume: ");
+    Serial.print(volume_total);
+    Serial.println(" L");
+    Serial.println();
   }
 
-  //logica para zerar a variavel volume_total
-   if((botao == HIGH) && (millis()-tempo_botao>300)){
-      flag_limiteVazao = LOW;
-      tempo_botao = millis();
-      if (++mode > 2) {
-        mode = 0;
-      }
+  //logica para evitar que haja duplo clique
+  if((botao == HIGH) && (millis()-tempo_botao>300)){
+    flag_limiteVazao = LOW;
+    tempo_botao = millis();
+    if (++mode > 2) {
+      mode = 0;
+    }
   }
   
 }
