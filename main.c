@@ -99,7 +99,13 @@ void loop() {
 
     //conversao do valor de pulsos para L/min
     vazao = ((1000.0 / (millis() - tempo_antes)) * contador) / fator_calibracao;
-
+    
+    //reinicializacao do contador de pulsos
+    contador = 0;
+    
+    //contagem de pulsos do sensor
+    attachInterrupt(INTERRUPCAO_SENSOR, contador_pulso, FALLING);
+    
     //calculo do volume em L passado pelo sensor
     volume = vazao / 60;
 
@@ -152,17 +158,10 @@ void loop() {
       delay(300);
     }
 
-    //reinicializacao do contador de pulsos
-    contador = 0;
-
     //atualizacao da variavel tempo_antes
     tempo_antes = millis();
 
-    //contagem de pulsos do sensor
-    attachInterrupt(INTERRUPCAO_SENSOR, contador_pulso, FALLING);
-
-    //Testes no IDLE 
-
+    //Testes pela serial 
     //exibicao do valor de vazao
     Serial.print("Mode");
     Serial.print(mode);
